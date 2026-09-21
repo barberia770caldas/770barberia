@@ -9,7 +9,7 @@ import SocialLinks from "@/components/SocialLinks";
 import { WhatsAppIcon } from "@/components/Icons";
 import ActivarRecordatoriosCliente from "@/components/ActivarRecordatoriosCliente";
 import { formatoCOP, METODOS_PAGO_LABEL } from "@/lib/constants";
-import { fechaLocalHoy, esFechaPasada, formatearHora12 } from "@/lib/disponibilidad";
+import { fechaLocalHoy, fechaLocalMax, esFechaPasada, formatearHora12 } from "@/lib/disponibilidad";
 import { esMovil } from "@/lib/dispositivo";
 import { linkWhatsApp } from "@/lib/whatsapp";
 
@@ -60,7 +60,8 @@ export default function AgendarPage() {
   async function buscarPrimeraFecha(planObj) {
     setBuscando(true);
     const d = new Date();
-    for (let i = 0; i < 30; i++) {
+    const limiteDias = barbero?.horario?.diasAnticipacionMax || 7;
+    for (let i = 0; i <= limiteDias; i++) {
       const f = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       try {
         const res = await fetch(`/api/barberos/${barberId}/disponibilidad?fecha=${f}&plan=${planObj.key}`);
@@ -73,7 +74,7 @@ export default function AgendarPage() {
       } catch {}
       d.setDate(d.getDate() + 1);
     }
-    setBuscando(false); // no encontró en 30 días; se queda en la fecha actual
+    setBuscando(false); // no encontró en el rango de días; se queda en la fecha actual
   }
 
   // Auto-avance: al elegir plan pasa a horario (y busca el primer día con cupos)
@@ -91,13 +92,18 @@ export default function AgendarPage() {
     setPaso(4);
   }
 
-  // Cambia la fecha rechazando cualquier día ya pasado (el atributo min del
-  // input no lo garantiza si se escribe la fecha a mano).
+  // Cambia la fecha rechazando cualquier día ya pasado o posterior al límite del barbero
   function elegirFecha(valor) {
     setFechaManual(true);
     if (esFechaPasada(valor)) {
       setError("No podés agendar en una fecha que ya pasó. Elegí de hoy en adelante.");
       return; // no actualiza: el input controlado revierte a la fecha válida
+    }
+    const maxDias = barbero?.horario?.diasAnticipacionMax || 7;
+    const maxFecha = fechaLocalMax(maxDias);
+    if (valor > maxFecha) {
+      setError(`Este barbero solo recibe reservas con hasta ${maxDias} días de anticipación (hasta el ${maxFecha}).`);
+      return;
     }
     setError("");
     setFecha(valor);
@@ -286,7 +292,7 @@ export default function AgendarPage() {
 
           {/* Accesos rápidos de fecha */}
           <div className="flex flex-wrap gap-2">
-            {chipsFecha(barbero.horario?.diasLaborales).map((c) => (
+            {chipsFecha(barbero.horario?.diasLaborales, barbero.horario?.diasAnticipacionMax || 7).map((c) => (
               <button
                 key={c.valor}
                 onClick={() => elegirFecha(c.valor)}
@@ -298,7 +304,17 @@ export default function AgendarPage() {
           </div>
           <div>
             <label className="label">O elige otra fecha</label>
-            <input type="date" className="input" min={fechaLocalHoy()} value={fecha} onChange={(e) => elegirFecha(e.target.value)} />
+            <input
+              type="date"
+              className="input"
+              min={fechaLocalHoy()}
+              max={fechaLocalMax(barbero.horario?.diasAnticipacionMax || 7)}
+              value={fecha}
+              onChange={(e) => elegirFecha(e.target.value)}
+            />
+            <p className="text-xs text-barber-gray mt-1">
+              Agenda abierta hasta el {etiquetaFecha(fechaLocalMax(barbero.horario?.diasAnticipacionMax || 7), false)} (máx. {barbero.horario?.diasAnticipacionMax || 7} días).
+            </p>
           </div>
 
           <div>
@@ -538,13 +554,14 @@ function etiquetaFecha(fechaStr, relativo = true) {
   return cap;
 }
 
-// Accesos rápidos: días laborales del barbero desde hoy hasta el fin de la semana
-// (domingo). No incluye días ya pasados ni días en que el barbero no trabaja.
-function chipsFecha(diasLaborales = [1, 2, 3, 4, 5, 6]) {
+// Accesos rápidos: días laborales del barbero dentro de su ventana de reserva
+// (hasta diasAnticipacionMax días desde hoy). No incluye días pasados ni no laborales.
+function chipsFecha(diasLaborales = [1, 2, 3, 4, 5, 6], diasAnticipacionMax = 7) {
   const out = [];
   const base = new Date();
-  const diasHastaDomingo = (7 - base.getDay()) % 7; // 0=domingo … resto de la semana
-  for (let i = 0; i <= diasHastaDomingo; i++) {
+  // Mostrar días disponibles dentro de la ventana (máximo 14 chips para no saturar)
+  const limite = Math.min(Number(diasAnticipacionMax) || 7, 14);
+  for (let i = 0; i <= limite; i++) {
     const d = new Date(base);
     d.setDate(base.getDate() + i);
     if (!diasLaborales.includes(d.getDay())) continue; // solo días habilitados

@@ -61,6 +61,10 @@ export const PUT = handler(async (req) => {
       const dur = Number(body.horario.duracionTurnoMin);
       if (dur >= 15 && dur <= 120) b.horario.duracionTurnoMin = dur;
     }
+    if (body.horario.diasAnticipacionMax != null) {
+      const dias = Number(body.horario.diasAnticipacionMax);
+      if (dias >= 1 && dias <= 90) b.horario.diasAnticipacionMax = dias;
+    }
     if (body.horario.almuerzo) {
       b.horario.almuerzo = {
         activo: !!body.horario.almuerzo.activo,

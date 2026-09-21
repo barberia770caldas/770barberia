@@ -161,6 +161,19 @@ export function esFechaPasada(fecha) {
   return !!fecha && fecha < fechaLocalHoy();
 }
 
+// Fecha 'YYYY-MM-DD' máxima permitida para agendar según los días de anticipación
+// configurados por el barbero (estilo Calendly).
+export function fechaLocalMax(diasAnticipacion = 7) {
+  const hoyStr = fechaLocalHoy();
+  const [y, m, d] = hoyStr.split("-").map(Number);
+  const fecha = new Date(y, m - 1, d);
+  fecha.setDate(fecha.getDate() + Number(diasAnticipacion || 7));
+  const yyyy = fecha.getFullYear();
+  const mm = String(fecha.getMonth() + 1).padStart(2, "0");
+  const dd = String(fecha.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 // Minutos transcurridos del día (0..1439) ahora mismo en Colombia.
 export function minutosActualesColombia() {
   const partes = new Intl.DateTimeFormat("en-GB", {

@@ -65,6 +65,12 @@ const BarberoSchema = new mongoose.Schema(
         min: 15,
         max: 120,
       },
+      diasAnticipacionMax: {
+        type: Number,
+        default: HORARIO_DEFAULT.diasAnticipacionMax || 7,
+        min: 1,
+        max: 90,
+      },
       // Hora de almuerzo: se aplica a todos los días laborales y no queda
       // disponible para agendar citas.
       almuerzo: {

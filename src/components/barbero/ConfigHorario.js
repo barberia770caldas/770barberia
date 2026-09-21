@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { DIAS_SEMANA, DURACIONES_CORTE_OPCIONES } from "@/lib/constants";
-import { fechaLocalHoy, esFechaPasada, formatearHora12, hhmmAMin, minAHhmm } from "@/lib/disponibilidad";
+import { DIAS_SEMANA, DURACIONES_CORTE_OPCIONES, DIAS_ANTICIPACION_OPCIONES } from "@/lib/constants";
+import { fechaLocalHoy, fechaLocalMax, esFechaPasada, formatearHora12, hhmmAMin, minAHhmm } from "@/lib/disponibilidad";
 import { linkWhatsApp } from "@/lib/whatsapp";
 
 export default function ConfigHorario({ perfil, onGuardado, onIrACita }) {
@@ -10,6 +10,7 @@ export default function ConfigHorario({ perfil, onGuardado, onIrACita }) {
   const [horaFin, setHoraFin] = useState(perfil.horario?.horaFin || "19:00");
   const [dias, setDias] = useState(perfil.horario?.diasLaborales || [1, 2, 3, 4, 5, 6]);
   const [duracionTurnoMin, setDuracionTurnoMin] = useState(perfil.horario?.duracionTurnoMin || 30);
+  const [diasAnticipacionMax, setDiasAnticipacionMax] = useState(perfil.horario?.diasAnticipacionMax || 7);
   const [almuerzoActivo, setAlmuerzoActivo] = useState(perfil.horario?.almuerzo?.activo || false);
   const [almuerzoIni, setAlmuerzoIni] = useState(perfil.horario?.almuerzo?.horaInicio || "13:00");
   const [almuerzoFin, setAlmuerzoFin] = useState(perfil.horario?.almuerzo?.horaFin || "14:00");
@@ -130,6 +131,7 @@ export default function ConfigHorario({ perfil, onGuardado, onIrACita }) {
           horaFin,
           diasLaborales: dias,
           duracionTurnoMin: Number(duracionTurnoMin),
+          diasAnticipacionMax: Number(diasAnticipacionMax),
           almuerzo: { activo: almuerzoActivo, horaInicio: almuerzoIni, horaFin: almuerzoFin },
         },
         ventanaCancelacionHoras: Number(ventana),
@@ -325,6 +327,38 @@ export default function ConfigHorario({ perfil, onGuardado, onIrACita }) {
               )}
             </>
           )}
+        </div>
+
+        {/* Ventana de reserva futura — Estilo Calendly */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="label mb-0">📅 ¿Con cuánta anticipación pueden agendarte?</label>
+            <span className="text-xs font-bold text-barber-blue bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+              Máximo {diasAnticipacionMax} días a futuro
+            </span>
+          </div>
+          <p className="text-xs text-barber-gray mb-2">
+            Controla qué tan abierta está tu agenda. Los clientes solo podrán elegir fechas dentro de esta ventana:
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+            {DIAS_ANTICIPACION_OPCIONES.map((op) => (
+              <button
+                key={op.valor}
+                type="button"
+                onClick={() => setDiasAnticipacionMax(op.valor)}
+                className={`rounded-lg py-2 text-xs font-bold border transition ${
+                  diasAnticipacionMax === op.valor
+                    ? "bg-barber-ink text-white border-barber-ink shadow-sm"
+                    : "border-gray-200 text-barber-gray hover:border-barber-ink hover:text-barber-ink bg-white"
+                }`}
+              >
+                {op.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-barber-gray mt-2 bg-barber-cream/70 p-2.5 rounded-lg border border-black/5">
+            📌 Los clientes podrán agendar desde <b>hoy</b> hasta el <b>{fechaLocalMax(diasAnticipacionMax)}</b>. Las fechas posteriores estarán bloqueadas automáticamente.
+          </p>
         </div>
 
         {/* Cancelación — explicado en lenguaje claro */}

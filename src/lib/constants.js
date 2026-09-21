@@ -107,6 +107,8 @@ export const HORARIO_DEFAULT = {
   diasLaborales: [1, 2, 3, 4, 5, 6],
   // Duración estándar por corte / turno en minutos
   duracionTurnoMin: 30,
+  // Ventana de días futuros en que un cliente puede agendar (estilo Calendly)
+  diasAnticipacionMax: 7,
   // Hora de almuerzo (se aplica a los días laborales). Desactivada por defecto.
   almuerzo: {
     activo: false,
@@ -116,6 +118,15 @@ export const HORARIO_DEFAULT = {
 };
 
 export const DURACIONES_CORTE_OPCIONES = [20, 25, 30, 35, 40, 45, 50, 60];
+
+// Opciones de días máximos de anticipación para agendar
+export const DIAS_ANTICIPACION_MAX_DEFAULT = 7;
+export const DIAS_ANTICIPACION_OPCIONES = [
+  { valor: 3, label: "3 días" },
+  { valor: 7, label: "7 días (1 semana)" },
+  { valor: 14, label: "14 días (2 semanas)" },
+  { valor: 30, label: "30 días (1 mes)" },
+];
 
 // Datos por defecto de la sede/barbería principal
 export const BARBERIA_SEDE_DEFAULT = {

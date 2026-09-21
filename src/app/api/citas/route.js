@@ -4,7 +4,7 @@ import Cita from "@/models/Cita";
 import Cliente from "@/models/Cliente";
 import { ok, fail, handler } from "@/lib/api";
 import { getSession } from "@/lib/auth";
-import { calcularSlots, minAHhmm, hhmmAMin, fechaLocalHoy, formatearHora12, minutosActualesColombia } from "@/lib/disponibilidad";
+import { calcularSlots, minAHhmm, hhmmAMin, fechaLocalHoy, fechaLocalMax, formatearHora12, minutosActualesColombia } from "@/lib/disponibilidad";
 import { normalizarCelular, linkWhatsApp, mensajeNuevaCita } from "@/lib/whatsapp";
 import { ESTADO_CITA, ROLES } from "@/lib/constants";
 import { serializarCita } from "@/lib/serializers";
@@ -65,6 +65,11 @@ export const POST = handler(async (req) => {
 
   const barbero = await Barbero.findById(barberoId);
   if (!barbero) return fail("Barbero no encontrado", 404);
+
+  const diasMax = barbero.horario?.diasAnticipacionMax || 7;
+  const fechaMax = fechaLocalMax(diasMax);
+  if (fecha > fechaMax)
+    return fail(`Este barbero solo recibe reservas con hasta ${diasMax} días de anticipación (hasta el ${fechaMax}).`, 400);
 
   const plan = (barbero.planes || []).find((p) => p.key === planKey && p.activo);
   if (!plan) return fail("Plan no disponible", 400);
