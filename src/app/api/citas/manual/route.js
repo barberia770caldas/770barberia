@@ -3,7 +3,7 @@ import Barbero from "@/models/Barbero";
 import Cita from "@/models/Cita";
 import { ok, fail, handler } from "@/lib/api";
 import { getSession } from "@/lib/auth";
-import { calcularSlots, minAHhmm, hhmmAMin, fechaLocalHoy } from "@/lib/disponibilidad";
+import { calcularSlots, minAHhmm, hhmmAMin, fechaLocalHoy, jornadaDelDia, seSolapa } from "@/lib/disponibilidad";
 import { normalizarCelular, linkWhatsApp, mensajeConfirmacion } from "@/lib/whatsapp";
 import { ESTADO_CITA, ROLES } from "@/lib/constants";
 import { serializarCita } from "@/lib/serializers";
@@ -42,12 +42,24 @@ export const POST = handler(async (req) => {
     .lean();
 
   const duracionCita = Number(plan.duracion) || barbero.horario?.duracionTurnoMin || 30;
+  const inicioMin = hhmmAMin(horaInicio);
+  const finMinCita = inicioMin + duracionCita;
 
-  const slots = calcularSlots({ barbero, fecha, duracion: duracionCita, citas: citasDia });
-  if (!slots.includes(horaInicio))
-    return fail("Ese horario no está disponible en la agenda.", 409);
+  const jornada = jornadaDelDia({ barbero, fecha, citas: citasDia });
+  if (jornada.tipo !== "laboral") {
+    return fail("El barbero no labora en esta fecha.", 400);
+  }
 
-  const horaFin = minAHhmm(hhmmAMin(horaInicio) + duracionCita);
+  if (inicioMin < jornada.inicioMin || finMinCita > jornada.finMin) {
+    return fail("La cita excede el horario laboral del barbero.", 400);
+  }
+
+  const solapa = jornada.ocupados.some((o) => seSolapa(inicioMin, finMinCita, o.ini, o.fin));
+  if (solapa) {
+    return fail("Ese horario se cruza con otra cita agendada, ausencia o almuerzo.", 409);
+  }
+
+  const horaFin = minAHhmm(finMinCita);
 
   const cita = await Cita.create({
     barbero: barbero._id,

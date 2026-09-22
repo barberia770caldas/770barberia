@@ -95,7 +95,6 @@ export default function CitaManual({ planes, onCreada, prefill }) {
 
   useEffect(() => {
     if (!planKey || !fecha) return;
-    setHora("");
     // Reutilizamos disponibilidad: necesitamos el id del barbero -> perfil
     fetch("/api/barbero/perfil")
       .then((r) => r.json())
@@ -106,7 +105,7 @@ export default function CitaManual({ planes, onCreada, prefill }) {
           .then((x) => {
             const lista = x.slots || [];
             setSlots(lista);
-            // Aplicar la hora que vino del Calendario (una sola vez).
+            // Si vino una hora deseada desde el Calendario
             const h = horaDeseada.current;
             if (h) {
               horaDeseada.current = "";
@@ -114,9 +113,21 @@ export default function CitaManual({ planes, onCreada, prefill }) {
                 seleccionarHora(h);
                 setError("");
               } else {
-                setError(`La hora ${formatearHora12(h)} no alcanza para este plan; elegí otra de la lista.`);
+                setError(`La hora ${formatearHora12(h)} se cruza con otra cita o no alcanza para este servicio; elegí otra hora.`);
               }
+              return;
             }
+            // Si el barbero ya tenía una hora elegida y cambió de plan, conservarla si cabe
+            setHora((prevHora) => {
+              if (prevHora && lista.includes(prevHora)) {
+                setError("");
+                return prevHora;
+              }
+              if (prevHora && !lista.includes(prevHora)) {
+                setError(`La hora ${formatearHora12(prevHora)} no está disponible para la duración de este servicio.`);
+              }
+              return "";
+            });
           })
       );
   }, [planKey, fecha]);

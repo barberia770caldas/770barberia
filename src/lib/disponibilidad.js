@@ -129,12 +129,25 @@ export function calcularSlots({ barbero, fecha, duracion, citas = [] }) {
 
   const { inicioMin, finMin, ocupados, minPermitido } = jornada;
   const dur = Number(duracion) || barbero?.horario?.duracionTurnoMin || barbero?.planes?.[0]?.duracion || PASO_MIN;
-  // El intervalo entre cupos debe avanzar según la duración de la cita (ej. cada 40 min si la cita es de 40 min)
-  const paso = dur;
+  const pasoTurno = barbero?.horario?.duracionTurnoMin || PASO_MIN;
+
+  // Generamos puntos de inicio candidatos:
+  // 1. La rejilla habitual del barbero basada en duracionTurnoMin (o PASO_MIN)
+  // 2. La hora en que finaliza cada cita o franja ocupada existente (para acomodar el resto del horario)
+  const candidatosSet = new Set();
+  for (let t = inicioMin; t + dur <= finMin; t += pasoTurno) {
+    if (t >= minPermitido) candidatosSet.add(t);
+  }
+  for (const o of ocupados) {
+    if (o.fin >= minPermitido && o.fin + dur <= finMin && o.fin >= inicioMin) {
+      candidatosSet.add(o.fin);
+    }
+  }
+
+  const candidatos = Array.from(candidatosSet).sort((a, b) => a - b);
 
   const slots = [];
-  for (let t = inicioMin; t + dur <= finMin; t += paso) {
-    if (t < minPermitido) continue;
+  for (const t of candidatos) {
     const fin = t + dur;
     const chocaConOcupado = ocupados.some((o) => seSolapa(t, fin, o.ini, o.fin));
     if (!chocaConOcupado) {

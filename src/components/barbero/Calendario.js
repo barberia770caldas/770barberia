@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import EstadoBadge from "@/components/EstadoBadge";
 import { WhatsAppIcon, CalendarioIcon } from "@/components/Icons";
 import { DIAS_SEMANA } from "@/lib/constants";
-import { fechaLocalHoy, minAHhmm, jornadaDelDia, PASO_MIN, formatearHora12 } from "@/lib/disponibilidad";
+import { fechaLocalHoy, minAHhmm, jornadaDelDia, PASO_MIN, formatearHora12, minutosActualesColombia, hhmmAMin } from "@/lib/disponibilidad";
 import { esMovil } from "@/lib/dispositivo";
 import { useDialog } from "@/components/DialogProvider";
 import { generarIcsDia, descargarIcs } from "@/lib/calendario";
@@ -346,6 +346,10 @@ function SlotFila({ slot, fecha, abierta, onToggle, onAccion, onAgendarManual })
   const estilo = CITA_ESTILO[c.estado] || { wrap: "border-gray-200 bg-gray-50", barra: "bg-gray-400" };
   const celular = (c.clienteCelular || "").replace(/\D/g, "");
   const esSolicitada = c.estado === "solicitada";
+  const hoyStr = fechaLocalHoy();
+  const ahoraMin = minutosActualesColombia();
+  const inicioCitaMin = hhmmAMin(c.horaInicio);
+  const esFutura = fecha > hoyStr || (fecha === hoyStr && inicioCitaMin > ahoraMin);
 
   // Slots siguientes de una cita que abarca varias medias horas: renglón compacto.
   if (!slot.esInicio) {
@@ -403,19 +407,21 @@ function SlotFila({ slot, fecha, abierta, onToggle, onAccion, onAgendarManual })
 
           {c.estado === "confirmada" && (
             <>
-              <button
-                type="button"
-                className="btn-dark text-xs py-1.5 px-2.5 sm:px-3 shrink-0 whitespace-nowrap font-medium"
-                onClick={() => onAccion(c.id, "completar")}
-              >
-                Completar
-              </button>
+              {!esFutura && (
+                <button
+                  type="button"
+                  className="btn-dark text-xs py-1.5 px-2.5 sm:px-3 shrink-0 whitespace-nowrap font-medium"
+                  onClick={() => onAccion(c.id, "completar")}
+                >
+                  Completar
+                </button>
+              )}
               <button
                 type="button"
                 className="btn-outline text-xs py-1.5 px-2.5 sm:px-3 shrink-0 whitespace-nowrap font-medium"
                 onClick={() => onAccion(c.id, "cancelar")}
               >
-                Cancelar
+                Cancelar Cita
               </button>
             </>
           )}

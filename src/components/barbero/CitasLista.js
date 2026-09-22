@@ -6,7 +6,7 @@ import { WhatsAppIcon, CalendarioIcon } from "@/components/Icons";
 import ModalCitaConfirmada from "./ModalCitaConfirmada";
 import BotonCalendarioCita from "./BotonCalendarioCita";
 import { formatoCOP, METODOS_PAGO_LABEL } from "@/lib/constants";
-import { fechaLocalHoy, formatearHora12 } from "@/lib/disponibilidad";
+import { fechaLocalHoy, formatearHora12, minutosActualesColombia, hhmmAMin } from "@/lib/disponibilidad";
 import { esMovil } from "@/lib/dispositivo";
 import { useDialog } from "@/components/DialogProvider";
 import { generarIcsDia, descargarIcs } from "@/lib/calendario";
@@ -142,35 +142,43 @@ export default function CitasLista({ onCambio }) {
                 <EstadoBadge estado={c.estado} />
               </div>
 
-              <div className="mt-3 flex flex-wrap gap-2">
-                {c.estado === "solicitada" && (
-                  <>
-                    <button className="btn-blue text-sm py-1.5" onClick={() => accion(c.id, "confirmar")}>Aceptar</button>
-                    <button className="btn-outline text-sm py-1.5" onClick={() => accion(c.id, "rechazar")}>Rechazar</button>
-                  </>
-                )}
-                {c.estado === "confirmada" && (
-                  <>
-                    <button className="btn-dark text-sm py-1.5" onClick={() => accion(c.id, "completar")}>Marcar completada</button>
-                    <button className="btn-outline text-sm py-1.5" onClick={() => accion(c.id, "cancelar")}>Cancelar Cita</button>
-                    <BotonCalendarioCita cita={c} />
-                  </>
-                )}
-                {c.estado === "completada" && (
-                  <button className="btn-outline text-rose-700 border-rose-300 hover:bg-rose-50 text-sm py-1.5" onClick={() => accion(c.id, "no-asistio")}>No asistió</button>
-                )}
-                {c.estado === "no_asistio" && (
-                  <button className="btn-outline text-sm py-1.5" onClick={() => accion(c.id, "completar")}>Marcar completada</button>
-                )}
-                {c.pagoAnticipo?.requerido && c.pagoAnticipo?.comprobante && (
-                  <button className="btn-outline text-sm py-1.5" onClick={() => verComprobante(c.id)}>Ver comprobante</button>
-                )}
-                {c.clienteCelular && (
-                  <a className="btn-wa text-sm py-1.5" href={`https://wa.me/${c.clienteCelular.replace(/\D/g, "")}`} target="_blank" rel="noreferrer">
-                    <WhatsAppIcon className="w-4 h-4" /> WhatsApp
-                  </a>
-                )}
-              </div>
+              {(() => {
+                const ahoraMin = minutosActualesColombia();
+                const esFutura = hhmmAMin(c.horaInicio) > ahoraMin;
+                return (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {c.estado === "solicitada" && (
+                      <>
+                        <button className="btn-blue text-sm py-1.5" onClick={() => accion(c.id, "confirmar")}>Aceptar</button>
+                        <button className="btn-outline text-sm py-1.5" onClick={() => accion(c.id, "rechazar")}>Rechazar</button>
+                      </>
+                    )}
+                    {c.estado === "confirmada" && (
+                      <>
+                        {!esFutura && (
+                          <button className="btn-dark text-sm py-1.5" onClick={() => accion(c.id, "completar")}>Marcar completada</button>
+                        )}
+                        <button className="btn-outline text-sm py-1.5" onClick={() => accion(c.id, "cancelar")}>Cancelar Cita</button>
+                        <BotonCalendarioCita cita={c} />
+                      </>
+                    )}
+                    {c.estado === "completada" && (
+                      <button className="btn-outline text-rose-700 border-rose-300 hover:bg-rose-50 text-sm py-1.5" onClick={() => accion(c.id, "no-asistio")}>No asistió</button>
+                    )}
+                    {c.estado === "no_asistio" && (
+                      <button className="btn-outline text-sm py-1.5" onClick={() => accion(c.id, "completar")}>Marcar completada</button>
+                    )}
+                    {c.pagoAnticipo?.requerido && c.pagoAnticipo?.comprobante && (
+                      <button className="btn-outline text-sm py-1.5" onClick={() => verComprobante(c.id)}>Ver comprobante</button>
+                    )}
+                    {c.clienteCelular && (
+                      <a className="btn-wa text-sm py-1.5" href={`https://wa.me/${c.clienteCelular.replace(/\D/g, "")}`} target="_blank" rel="noreferrer">
+                        <WhatsAppIcon className="w-4 h-4" /> WhatsApp
+                      </a>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           ))}
         </div>

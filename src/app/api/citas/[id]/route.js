@@ -4,6 +4,7 @@ import Barbero from "@/models/Barbero";
 import { ok, fail, handler } from "@/lib/api";
 import { getSession } from "@/lib/auth";
 import { ESTADO_CITA, ROLES } from "@/lib/constants";
+import { fechaLocalHoy, minutosActualesColombia, hhmmAMin } from "@/lib/disponibilidad";
 import {
   linkWhatsApp,
   mensajeConfirmacion,
@@ -52,6 +53,14 @@ export const PATCH = handler(async (req, { params }) => {
       if (!esBarberoDueno) return fail("No autorizado", 403);
       if (![ESTADO_CITA.CONFIRMADA, ESTADO_CITA.NO_ASISTIO].includes(cita.estado))
         return fail("Solo se pueden completar citas confirmadas o no asistidas", 400);
+
+      const hoy = fechaLocalHoy();
+      const ahoraMin = minutosActualesColombia();
+      const inicioMin = hhmmAMin(cita.horaInicio);
+      if (cita.fecha > hoy || (cita.fecha === hoy && inicioMin > ahoraMin)) {
+        return fail("No puedes completar una cita antes de su hora programada; el cliente aún no ha llegado.", 400);
+      }
+
       cita.estado = ESTADO_CITA.COMPLETADA;
       await cita.save();
       return ok({ cita: serializarCita(cita.toObject()) });
