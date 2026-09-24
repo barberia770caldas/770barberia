@@ -64,6 +64,17 @@ h1, h2, h3, .font-display {
   );
 }
 
+/* Oculta la barra de desplazamiento sin quitar el scroll táctil */
+@layer utilities {
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @layer components {
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px];

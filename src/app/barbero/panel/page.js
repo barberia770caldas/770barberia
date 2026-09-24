@@ -77,12 +77,12 @@ export default function PanelBarberoPage() {
           <ActivarNotificaciones descripcion="Recibí un aviso apenas un cliente te solicite una cita, aunque tengas la app cerrada." />
         </div>
 
-        <div className="mt-3 sm:mt-4 flex overflow-x-auto border-b border-black/10 scrollbar-none">
+        <div className="mt-3 sm:mt-4 flex overflow-x-auto overflow-y-hidden border-b border-black/10 scrollbar-none">
           {TABS.map((t) => (
             <button
               key={t.key}
               onClick={() => { setPrefillManual(null); setTab(t.key); }}
-              className={`px-3 sm:px-4 py-2.5 font-semibold whitespace-nowrap border-b-2 -mb-px flex-1 sm:flex-none min-w-0 ${tab === t.key ? "border-barber-red text-barber-red" : "border-transparent text-barber-gray hover:text-barber-ink"}`}
+              className={`px-2.5 sm:px-4 py-2.5 font-semibold whitespace-nowrap border-b-2 -mb-px flex-auto shrink-0 sm:flex-none ${tab === t.key ? "border-barber-red text-barber-red" : "border-transparent text-barber-gray hover:text-barber-ink"}`}
             >
               <span className="text-sm sm:text-base">{t.label}</span>
             </button>

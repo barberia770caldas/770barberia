@@ -406,7 +406,7 @@ export default function ConfigHorario({ perfil, onGuardado, onIrACita }) {
               key={op.key}
               type="button"
               onClick={() => setModoBloqueo(op.key)}
-              className={`rounded-lg py-2 text-sm font-bold transition ${
+              className={`rounded-lg py-2 px-2 text-sm font-bold leading-tight transition ${
                 modoBloqueo === op.key ? "bg-white text-barber-ink shadow-sm" : "text-barber-gray"
               }`}
             >
@@ -417,14 +417,15 @@ export default function ConfigHorario({ perfil, onGuardado, onIrACita }) {
 
         {/* Formulario según modo */}
         {modoBloqueo === "dia" ? (
-          <div className="flex gap-2">
-            <input type="date" className="input" min={fechaLocalHoy()} value={nuevoBloqueo} onChange={(e) => elegirFechaBloqueo(e.target.value)} />
-            <button type="button" className="btn-outline text-sm whitespace-nowrap" onClick={agregarBloqueo}>+ Bloquear</button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input type="date" className="input min-w-0" min={fechaLocalHoy()} value={nuevoBloqueo} onChange={(e) => elegirFechaBloqueo(e.target.value)} />
+            <button type="button" className="btn-outline text-sm whitespace-nowrap w-full sm:w-auto" onClick={agregarBloqueo}>+ Bloquear</button>
           </div>
         ) : (
           <div className="space-y-2">
-            <div className="grid grid-cols-3 gap-2">
-              <div>
+            {/* Móvil: fecha a lo ancho y Desde/Hasta en dos columnas debajo */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 [&_input]:min-w-0">
+              <div className="col-span-2 sm:col-span-1">
                 <label className="label text-xs">Fecha</label>
                 <input type="date" className="input" min={fechaLocalHoy()} value={nuevoBloqueo} onChange={(e) => elegirFechaBloqueo(e.target.value)} />
               </div>
@@ -484,13 +485,13 @@ export default function ConfigHorario({ perfil, onGuardado, onIrACita }) {
 
       <section className="card p-6 space-y-3">
         <h2 className="font-display text-xl">Datos de pago (para tus clientes)</h2>
-        <div className="grid sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 [&>div]:min-w-0">
           <div><label className="label">Nequi</label><input className="input" value={datosPago.nequi || ""} onChange={(e) => setDatosPago({ ...datosPago, nequi: e.target.value })} placeholder="Número Nequi" /></div>
           <div><label className="label">Daviplata</label><input className="input" value={datosPago.daviplata || ""} onChange={(e) => setDatosPago({ ...datosPago, daviplata: e.target.value })} placeholder="Número Daviplata" /></div>
           <div className="sm:col-span-2"><label className="label">Cuenta bancaria</label><input className="input" value={datosPago.cuenta || ""} onChange={(e) => setDatosPago({ ...datosPago, cuenta: e.target.value })} placeholder="Banco y número de cuenta" /></div>
           <div className="sm:col-span-2">
             <label className="label">Código QR (imagen)</label>
-            <input type="file" accept="image/*" onChange={onQR} className="text-sm" />
+            <input type="file" accept="image/*" onChange={onQR} className="block w-full max-w-full text-sm text-barber-gray file:mr-3 file:rounded-lg file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-barber-ink hover:file:bg-gray-200" />
             {datosPago.qrImagen && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={datosPago.qrImagen} alt="QR" className="mt-2 w-32 h-32 object-contain border rounded" />

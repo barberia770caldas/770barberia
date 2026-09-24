@@ -286,17 +286,18 @@ function SlotFila({ slot, fecha, abierta, onToggle, onAccion, onAgendarManual })
 
   if (slot.tipo === "libre") {
     return (
-      <div className="flex items-center gap-3 px-3 py-2 rounded-lg border border-green-200 bg-green-50">
+      <div className="flex items-center gap-2 sm:gap-3 px-3 py-2 rounded-lg border border-green-200 bg-green-50">
         <div className="w-1 self-stretch rounded-full shrink-0 bg-green-400" />
         <span className={COL_HORA}>{rangoSlot}</span>
-        <span className="text-sm font-semibold text-green-700 flex-1 min-w-0">Libre</span>
+        {/* En móvil no hay espacio: el fondo verde ya indica que está libre */}
+        <span className="hidden sm:inline text-sm font-semibold text-green-700 flex-1 min-w-0">Libre</span>
         {onAgendarManual && (
           <button
             type="button"
             onClick={() => onAgendarManual(fecha, slot.inicio)}
-            className="btn-primary text-xs py-1.5 px-3 shrink-0 whitespace-nowrap"
+            className="btn-primary text-xs py-1.5 px-3 shrink-0 whitespace-nowrap ml-auto"
           >
-            + Agendar manual
+            + Agendar<span className="hidden sm:inline"> manual</span>
           </button>
         )}
       </div>
@@ -370,12 +371,15 @@ function SlotFila({ slot, fecha, abierta, onToggle, onAccion, onAgendarManual })
         {/* Lado izquierdo: barra, hora, cliente y plan */}
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <div className={`w-1 self-stretch rounded-full shrink-0 ${estilo.barra}`} />
-          <span className={COL_HORA}>{hora12(slot.inicioReal)} – {hora12(slot.finReal)}</span>
-          <div className="min-w-0 flex-1 flex flex-wrap items-baseline gap-x-2">
-            <span className="font-bold text-sm text-barber-ink truncate">{c.clienteNombre}</span>
-            <span className="text-xs text-barber-gray whitespace-nowrap">· {c.planSnapshot?.nombre} ({formatDur(slot.duracion)})</span>
+          {/* En móvil la hora va arriba y el cliente/plan debajo, para dejar lugar al badge */}
+          <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2.5">
+            <span className={COL_HORA}>{hora12(slot.inicioReal)} – {hora12(slot.finReal)}</span>
+            <div className="min-w-0 flex-1 flex flex-wrap items-baseline gap-x-2">
+              <span className="font-bold text-sm text-barber-ink truncate">{c.clienteNombre}</span>
+              <span className="text-xs text-barber-gray whitespace-nowrap">· {c.planSnapshot?.nombre} ({formatDur(slot.duracion)})</span>
+            </div>
           </div>
-          <div className="shrink-0 sm:hidden">
+          <div className="shrink-0 self-start sm:hidden">
             <EstadoBadge estado={c.estado} />
           </div>
         </div>
