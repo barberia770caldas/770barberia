@@ -72,7 +72,7 @@ export default function ResumenDiario() {
     <div className="max-w-3xl space-y-6">
       {/* Navegador ágil de fechas */}
       <div className="card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white">
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
           <button
             onClick={() => cambiarFecha(sumarDias(fecha, -1))}
             className="btn-outline px-3 py-1.5 text-xs sm:text-sm"
@@ -99,7 +99,7 @@ export default function ResumenDiario() {
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center sm:justify-start gap-2">
           <input
             type="date"
             className="input text-sm py-1.5 px-3 max-w-[170px]"
