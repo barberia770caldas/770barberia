@@ -84,6 +84,8 @@ export default function ActivarNotificaciones({ descripcion }) {
   );
 
   // Estado inicial: ¿ya está suscrito este dispositivo?
+  // Si ya hay una suscripción activa, la re-sincroniza con el servidor para
+  // cubrir el caso en que iOS/Android renovó el endpoint silenciosamente.
   useEffect(() => {
     if (!soportado) {
       setEstado("no-soportado");
@@ -94,8 +96,23 @@ export default function ActivarNotificaciones({ descripcion }) {
       return;
     }
     navigator.serviceWorker.ready
-      .then((reg) => reg.pushManager.getSubscription())
-      .then((sub) => setEstado(sub ? "activo" : "inactivo"))
+      .then(async (reg) => {
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          setEstado("activo");
+          // Re-sync preventivo: asegurar que el servidor tiene este endpoint.
+          fetch("/api/push/subscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              subscription: sub.toJSON(),
+              userAgent: navigator.userAgent,
+            }),
+          }).catch(() => {});
+        } else {
+          setEstado("inactivo");
+        }
+      })
       .catch(() => setEstado("inactivo"));
   }, [soportado]);
 
@@ -150,6 +167,7 @@ export default function ActivarNotificaciones({ descripcion }) {
   const texto =
     descripcion ||
     "Recibí un aviso en este dispositivo cuando llegue algo nuevo, aunque tengas la app cerrada.";
+
 
   return (
     <div className="card p-4 flex items-start gap-3">

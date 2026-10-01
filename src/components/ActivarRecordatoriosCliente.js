@@ -31,14 +31,34 @@ export default function ActivarRecordatoriosCliente({ celular }) {
     !!VAPID_PUBLIC;
 
   // Estado inicial: ¿este dispositivo ya está suscrito?
+  // Si ya hay suscripción, re-sincroniza con el servidor preventivamente
+  // (cubre el caso en que el navegador renovó el endpoint silenciosamente).
   useEffect(() => {
     if (!soportado) { setEstado("no-soportado"); return; }
     if (Notification.permission === "denied") { setEstado("denegado"); return; }
     navigator.serviceWorker.ready
-      .then((reg) => reg.pushManager.getSubscription())
-      .then((sub) => setEstado(sub ? "activo" : "inactivo"))
+      .then(async (reg) => {
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          setEstado("activo");
+          const cel = (celular || "").replace(/\D/g, "");
+          if (cel.length >= 10) {
+            fetch("/api/push/cliente/subscribe", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                subscription: sub.toJSON(),
+                celular,
+                userAgent: navigator.userAgent,
+              }),
+            }).catch(() => {});
+          }
+        } else {
+          setEstado("inactivo");
+        }
+      })
       .catch(() => setEstado("inactivo"));
-  }, [soportado]);
+  }, [soportado, celular]);
 
   const activar = useCallback(async () => {
     const cel = (celular || "").replace(/\D/g, "");

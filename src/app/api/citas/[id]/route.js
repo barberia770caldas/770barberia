@@ -4,7 +4,7 @@ import Barbero from "@/models/Barbero";
 import { ok, fail, handler } from "@/lib/api";
 import { getSession } from "@/lib/auth";
 import { ESTADO_CITA, ROLES } from "@/lib/constants";
-import { fechaLocalHoy, minutosActualesColombia, hhmmAMin } from "@/lib/disponibilidad";
+import { fechaLocalHoy, minutosActualesColombia, hhmmAMin, formatearHora12 } from "@/lib/disponibilidad";
 import {
   linkWhatsApp,
   mensajeConfirmacion,
@@ -13,6 +13,7 @@ import {
   normalizarCelular,
 } from "@/lib/whatsapp";
 import { serializarCita } from "@/lib/serializers";
+import { enviarPush } from "@/lib/push";
 
 // PATCH /api/citas/:id  body: { accion, motivo?, celular? }
 // acciones: confirmar | rechazar | completar (barbero) ; cancelar (barbero o cliente)
@@ -34,6 +35,19 @@ export const PATCH = handler(async (req, { params }) => {
         return fail("Solo se pueden confirmar citas solicitadas", 400);
       cita.estado = ESTADO_CITA.CONFIRMADA;
       await cita.save();
+      // Notificación push al cliente (si tiene suscripción en este dispositivo).
+      if (cita.clienteCelular) {
+        const planNombre = cita.planSnapshot?.nombre || cita.plan;
+        enviarPush(
+          { ownerRole: "cliente", clienteCelular: normalizarCelular(cita.clienteCelular) },
+          {
+            title: "Cita confirmada ✅",
+            body: `Tu cita de ${planNombre} el ${cita.fecha} a las ${formatearHora12(cita.horaInicio)} fue confirmada.`,
+            url: "/mis-citas",
+            tag: `confirmada-${cita._id}`,
+          }
+        ).catch(() => {});
+      }
       const link = linkWhatsApp(cita.clienteCelular, mensajeConfirmacion(cita, barbero, { plano: !!plano }));
       return ok({ cita: serializarCita(cita.toObject()), linkWhatsApp: link });
     }
@@ -45,6 +59,18 @@ export const PATCH = handler(async (req, { params }) => {
       cita.estado = ESTADO_CITA.RECHAZADA;
       cita.motivoRechazo = motivo || "";
       await cita.save();
+      // Notificación push al cliente.
+      if (cita.clienteCelular) {
+        enviarPush(
+          { ownerRole: "cliente", clienteCelular: normalizarCelular(cita.clienteCelular) },
+          {
+            title: "Cita no disponible",
+            body: `Tu cita del ${cita.fecha} a las ${formatearHora12(cita.horaInicio)} no pudo ser confirmada.${motivo ? ` Motivo: ${motivo}` : ""}`,
+            url: "/mis-citas",
+            tag: `rechazada-${cita._id}`,
+          }
+        ).catch(() => {});
+      }
       const link = linkWhatsApp(cita.clienteCelular, mensajeRechazo(cita, barbero));
       return ok({ cita: serializarCita(cita.toObject()), linkWhatsApp: link });
     }
@@ -106,6 +132,19 @@ export const PATCH = handler(async (req, { params }) => {
       const eraConfirmada = cita.estado === ESTADO_CITA.CONFIRMADA;
       cita.estado = ESTADO_CITA.CANCELADA;
       await cita.save();
+
+      // Notificación push al cliente cuando se cancela.
+      if (cita.clienteCelular) {
+        enviarPush(
+          { ownerRole: "cliente", clienteCelular: normalizarCelular(cita.clienteCelular) },
+          {
+            title: "Cita cancelada",
+            body: `Tu cita del ${cita.fecha} a las ${formatearHora12(cita.horaInicio)} fue cancelada.${motivo ? ` Motivo: ${motivo}` : ""}`,
+            url: "/mis-citas",
+            tag: `cancelada-${cita._id}`,
+          }
+        ).catch(() => {});
+      }
 
       // Si el barbero cancela una cita ya confirmada, avisar al cliente por WhatsApp.
       let link;

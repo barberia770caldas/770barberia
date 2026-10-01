@@ -32,6 +32,36 @@ self.addEventListener("push", (event) => {
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
+// El navegador renovó la suscripción push internamente (timeout, reinicio del
+// SW, actualización del navegador). Debemos re-sincronizar con el servidor para
+// que las notificaciones sigan llegando al nuevo endpoint.
+self.addEventListener("pushsubscriptionchange", (event) => {
+  event.waitUntil(
+    (async () => {
+      try {
+        const oldEndpoint = event.oldSubscription
+          ? event.oldSubscription.endpoint
+          : null;
+        const newSub = await self.registration.pushManager.subscribe(
+          event.oldSubscription
+            ? event.oldSubscription.options
+            : { userVisibleOnly: true }
+        );
+        await fetch("/api/push/resubscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            oldEndpoint,
+            newSubscription: newSub.toJSON(),
+          }),
+        });
+      } catch (err) {
+        console.error("pushsubscriptionchange falló:", err);
+      }
+    })()
+  );
+});
+
 // El usuario toca la notificación: enfocamos una pestaña abierta o abrimos la URL.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
