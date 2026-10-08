@@ -151,37 +151,41 @@ export default function ActivarRecordatoriosCliente({ celular }) {
   if ((celular || "").replace(/\D/g, "").length < 10) return null;
 
   return (
-    <div className="card p-4 flex items-start gap-3">
-      <span className="text-2xl leading-none" aria-hidden>🔔</span>
-      <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-sm">Recordatorio de tu cita</h3>
-        {estado === "denegado" && (
-          <p className="text-xs text-barber-gray mt-0.5">
-            Están bloqueadas. Habilitalas desde los ajustes del navegador para este sitio.
-          </p>
-        )}
+    <div className="card p-4">
+      <div className="flex items-start gap-3">
+        <span className="text-2xl leading-none" aria-hidden>🔔</span>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-sm">Recordatorio de tu cita</h3>
+          {estado === "denegado" && (
+            <p className="text-xs text-barber-gray mt-0.5">
+              Están bloqueadas. Habilitalas desde los ajustes del navegador para este sitio.
+            </p>
+          )}
+          {estado === "inactivo" && (
+            <p className="text-xs text-barber-gray mt-0.5">
+              Te avisamos el día de tu cita, apenas abra la barbería. En iPhone, instalá primero
+              la app y abrila desde el ícono.
+            </p>
+          )}
+          {estado === "activo" && (
+            <p className="text-xs text-green-700 mt-0.5">Activado en este dispositivo ✓</p>
+          )}
+          {estado === "activo" && mensajePrueba && (
+            <p className={`text-xs mt-1 ${mensajePrueba.ok ? "text-green-700" : "text-red-600"}`}>
+              {mensajePrueba.texto}
+            </p>
+          )}
+        </div>
         {estado === "inactivo" && (
-          <p className="text-xs text-barber-gray mt-0.5">
-            Te avisamos el día de tu cita, apenas abra la barbería. En iPhone, instalá primero
-            la app y abrila desde el ícono.
-          </p>
-        )}
-        {estado === "activo" && (
-          <p className="text-xs text-green-700 mt-0.5">Activado en este dispositivo ✓</p>
-        )}
-        {estado === "activo" && mensajePrueba && (
-          <p className={`text-xs mt-1 ${mensajePrueba.ok ? "text-green-700" : "text-red-600"}`}>
-            {mensajePrueba.texto}
-          </p>
+          <button onClick={activar} disabled={ocupado} className="btn-primary text-sm py-1.5 px-4 shrink-0">
+            {ocupado ? "Activando…" : "Activar"}
+          </button>
         )}
       </div>
-      {estado === "inactivo" && (
-        <button onClick={activar} disabled={ocupado} className="btn-primary text-sm py-1.5 px-4 shrink-0">
-          {ocupado ? "Activando…" : "Activar"}
-        </button>
-      )}
+      {/* Acciones del estado activo en su propia fila: se envuelven en pantallas
+          estrechas para que nunca se salgan de la tarjeta. */}
       {estado === "activo" && (
-        <div className="flex gap-2 shrink-0">
+        <div className="mt-3 flex flex-wrap gap-2 justify-end">
           <button onClick={enviarPrueba} disabled={probando} className="btn-outline text-sm py-1.5 px-4">
             {probando ? "Enviando…" : "🔔 Probar"}
           </button>

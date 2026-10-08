@@ -74,7 +74,7 @@ export default function PanelBarberoPage() {
         <h1 className="font-display text-2xl sm:text-3xl">Hola, {sesion.nombre.split(" ")[0]} 👋</h1>
 
         <div className="mt-4">
-          <ActivarNotificaciones descripcion="Recibí un aviso apenas un cliente te solicite una cita, aunque tengas la app cerrada." />
+          <ActivarNotificaciones permitirProbar descripcion="Recibí un aviso apenas un cliente te solicite una cita, aunque tengas la app cerrada." />
         </div>
 
         <div className="mt-3 sm:mt-4 flex overflow-x-auto overflow-y-hidden border-b border-black/10 scrollbar-none">
