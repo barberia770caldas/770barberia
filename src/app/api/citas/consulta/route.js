@@ -6,6 +6,7 @@ import { normalizarCelular } from "@/lib/whatsapp";
 import { serializarCita } from "@/lib/serializers";
 import { ESTADO_CITA } from "@/lib/constants";
 import { fechaLocalHoy } from "@/lib/disponibilidad";
+import { recordarClientesDelDia } from "@/lib/recordatorios";
 
 // GET /api/citas/consulta?celular=...  -> el cliente consulta sus citas por celular
 export const GET = handler(async (req) => {
@@ -15,7 +16,11 @@ export const GET = handler(async (req) => {
   if (!celularRaw) return fail("El celular es obligatorio");
 
   const celular = normalizarCelular(celularRaw);
-  
+
+  // Disparo oportuno: al consultar sus citas se procesa el recordatorio del día
+  // de este cliente (si ya abrió la barbería). El flag en BD evita repetirlo.
+  await recordarClientesDelDia({ celular });
+
   // Excluimos pagoAnticipo.comprobante para ahorrar consumo de RAM y ancho de banda
   const citas = await Cita.find({ clienteCelular: celular })
     .select("-pagoAnticipo.comprobante")

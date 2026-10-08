@@ -132,8 +132,8 @@ flowchart TD
 | **RF-13** | Cita Manual | Cita manual con Contact Picker API y autocompletado. | El barbero puede autocompletar clientes anteriores al escribir o abrir los contactos del móvil mediante la API nativa de Android/Chrome. |
 | **RF-14** | Horarios | Configuración de jornada, ausencias y almuerzo. | Permite definir horario general, duración de turnos, hora fija de almuerzo y bloqueos inmediatos de días completos o franjas de horas. |
 | **RF-15** | Clientes | Portal "Mis Citas" con pestañas. | Separa "Próximas citas" (destacando la más cercana o de hoy) e "Historial". Permite cancelar dentro de la ventana fijada por el barbero. |
-| **RF-16** | Notificaciones | Notificaciones Web Push (VAPID). | Envío de notificaciones push al barbero (nueva cita), admin (nuevo contacto) y cliente (recordatorio de cita). Auto-suscripción en PWA instalada. |
-| **RF-17** | Automatización | Cron de recordatorios programados. | Endpoint `/api/cron/recordatorios` que avisa al barbero de citas sin confirmar (~15 min antes) y al cliente en la mañana del día de su servicio. |
+| **RF-16** | Notificaciones | Notificaciones Web Push (VAPID). | Envío de notificaciones push al barbero (nueva cita, cancelación del cliente), admin (nuevo contacto) y cliente (confirmación de cita manual y recordatorio del día). Auto-suscripción en PWA instalada y botón "Probar" en Mis Citas. |
+| **RF-17** | Automatización | Recordatorios por tres vías. | Lógica centralizada en `src/lib/recordatorios.js`: avisa al barbero de citas sin confirmar (~15 min antes) y al cliente el día de su servicio. Se dispara de forma **oportuna** (al abrir panel/Mis Citas, con *flags* anti-repetición en BD), por **Vercel Cron** diario de respaldo (`vercel.json`) y, opcionalmente, por un **cron externo** cada 5-10 min; todos contra `/api/cron/recordatorios` con `Bearer <CRON_SECRET>`. |
 | **RF-18** | Reportes | Resumen diario financiero y operativo. | Métricas del día (totales, completadas, pendientes, canceladas, no asistidas) y desglose de ingresos en efectivo vs. transferencias/anticipos. |
 | **RF-19** | PWA | Instalación PWA multiplataforma. | Instalación en un clic en Android/PC (`beforeinstallprompt`) e instrucciones guiadas en iOS. |
 | **RF-20** | UI/UX | Sistema de diálogos modales nativos (`DialogProvider`). | Reemplazo de los `alert` y `confirm` del navegador por diálogos estilizados con soporte para acciones destructivas. |
@@ -267,6 +267,7 @@ citasbarber/
 │   │   ├── disponibilidad.js             # Motor central de disponibilidad en America/Bogota (UTC-5)
 │   │   ├── calendario.js                 # Utilidades RFC 5545 para exportación iCalendar y Google Calendar
 │   │   ├── push.js                       # Cliente web-push, envío a suscripciones y depuración 410
+│   │   ├── recordatorios.js              # Helpers de recordatorios (barbero sin confirmar / cliente del día)
 │   │   ├── whatsapp.js                   # Generador de enlaces wa.me con mensajes formateados
 │   │   ├── constants.js, emojis.js       # Constantes del negocio y catálogo de emojis seguros
 │   │   └── serializers.js, seed.js       # Serialización de objetos y datos de prueba
@@ -312,7 +313,8 @@ citasbarber/
 | | `POST /api/push/unsubscribe` | Da de baja una suscripción push de barbero o admin. |
 | | `POST /api/push/cliente/subscribe` | Registra suscripción push asociada al celular del cliente. |
 | | `POST /api/push/cliente/unsubscribe`| Da de baja la suscripción push del cliente. |
-| **Cron Jobs** | `GET /api/cron/recordatorios` | Invocación programada (Bearer Secret) para envío de recordatorios. |
+| | `POST /api/push/cliente/test` | Envía una notificación de prueba a los dispositivos del cliente (identificado por celular). |
+| **Cron Jobs** | `GET /api/cron/recordatorios` | Invocación programada (Bearer Secret) de respaldo para el envío de recordatorios. |
 
 ### 9.3 Modelo de Datos
 
@@ -427,8 +429,10 @@ classDiagram
 
 * **Alojamiento**: Repositorio en GitHub con despliegue continuo en **Vercel** ante pushes a la rama `main`.
 * **Base de Datos**: Clúster de **MongoDB Atlas** configurado mediante `MONGODB_URI`.
-* **Automatización de Recordatorios (Cron)**:
-  - Puede ejecutarse mediante **Vercel Cron** configurando `vercel.json` o a través de un servicio externo gratuito (ej. [cron-job.org](https://cron-job.org)) llamando periódicamente (ej. cada 5-10 minutos) a:
+* **Automatización de Recordatorios (tres vías)**: Los recordatorios se disparan por tres mecanismos complementarios, para que funcionen incluso sin cron externo:
+  - **(a) Oportuna:** al abrir el panel del barbero (`GET /api/citas`) y "Mis Citas" (`GET /api/citas/consulta`) se procesan los pendientes en el momento. Los *flags* `recordatorioEnviado` y `recordatorioClienteEnviado` en la colección `Cita` evitan repeticiones. Es la vía que cubre el día a día.
+  - **(b) Vercel Cron (respaldo diario):** `vercel.json` programa una ejecución diaria a las 10:00 AM de Colombia (`0 15 * * *` UTC). Vercel envía por sí solo el header `Authorization: Bearer <CRON_SECRET>`. En el plan **Hobby** los cron corren **una sola vez al día**, de ahí que no se usen expresiones de minutos.
+  - **(c) Cron externo (opcional):** para granularidad fina se puede usar un servicio gratuito (ej. [cron-job.org](https://cron-job.org)) llamando cada 5-10 minutos al mismo endpoint con el mismo header:
     ```http
     GET https://tudominio.com/api/cron/recordatorios
     Authorization: Bearer <CRON_SECRET>

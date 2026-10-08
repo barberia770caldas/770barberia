@@ -139,8 +139,11 @@ citasbarber/
    ```bash
    node scripts/crear-admin.mjs
    ```
-5. Para los recordatorios automáticos, configura una llamada programada cada 5-10 minutos (mediante Vercel Cron o [cron-job.org](https://cron-job.org)) a:
-   ```http
-   GET https://tudominio.com/api/cron/recordatorios
-   Authorization: Bearer <CRON_SECRET>
-   ```
+5. **Recordatorios automáticos.** Se disparan por **tres vías complementarias**, de modo que funcionan aunque no configures ningún cron externo:
+   - **(a) Oportuna (día a día):** al abrir el panel del barbero (`GET /api/citas`) y al consultar "Mis Citas" (`GET /api/citas/consulta`) se procesan los recordatorios pendientes en el momento. Unos *flags* en la BD (`recordatorioEnviado`, `recordatorioClienteEnviado`) garantizan que cada aviso se envíe una sola vez.
+   - **(b) Vercel Cron (respaldo diario):** el archivo `vercel.json` programa una llamada diaria a las **10:00 AM hora de Colombia** (`0 15 * * *` en UTC). Vercel envía automáticamente el header `Authorization: Bearer <CRON_SECRET>`. En el plan **Hobby** los cron solo pueden correr **1 vez al día**, por eso no se usan expresiones cada pocos minutos.
+   - **(c) Cron externo (opcional, granularidad fina):** si necesitás disparos más frecuentes, configurá un servicio como [cron-job.org](https://cron-job.org) llamando cada 5-10 minutos al mismo endpoint con el mismo header:
+     ```http
+     GET https://tudominio.com/api/cron/recordatorios
+     Authorization: Bearer <CRON_SECRET>
+     ```

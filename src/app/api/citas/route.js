@@ -10,6 +10,7 @@ import { ESTADO_CITA, ROLES } from "@/lib/constants";
 import { serializarCita } from "@/lib/serializers";
 import { validarComprobante } from "@/lib/validaciones";
 import { enviarPush } from "@/lib/push";
+import { recordarCitasSinConfirmar, recordarClientesDelDia } from "@/lib/recordatorios";
 
 // GET /api/citas  -> lista de citas del barbero autenticado (opcional ?fecha=)
 export const GET = handler(async (req) => {
@@ -39,8 +40,22 @@ export const GET = handler(async (req) => {
   const query = { barbero: session.barberoId };
   if (fecha) query.fecha = fecha;
 
+  // Disparo oportuno: al abrir el panel se procesan los recordatorios pendientes
+  // de este barbero (citas por confirmar inminentes y clientes del día). Los
+  // flags en BD evitan repetir envíos, así funciona aunque no haya cron externo.
+  const [avisoBarbero, avisoCliente] = await Promise.all([
+    recordarCitasSinConfirmar({ barberoId: session.barberoId }),
+    recordarClientesDelDia({ barberoId: session.barberoId }),
+  ]);
+
   const citas = await Cita.find(query).sort({ fecha: 1, horaInicio: 1 }).lean();
-  return ok({ citas: citas.map(serializarCita) });
+  return ok({
+    citas: citas.map(serializarCita),
+    recordatorios: {
+      sinConfirmar: avisoBarbero.notificadas,
+      clientes: avisoCliente.recordadas,
+    },
+  });
 });
 
 // POST /api/citas  -> el cliente crea una solicitud de cita

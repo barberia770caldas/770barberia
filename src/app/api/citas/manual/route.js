@@ -3,10 +3,11 @@ import Barbero from "@/models/Barbero";
 import Cita from "@/models/Cita";
 import { ok, fail, handler } from "@/lib/api";
 import { getSession } from "@/lib/auth";
-import { calcularSlots, minAHhmm, hhmmAMin, fechaLocalHoy, jornadaDelDia, seSolapa } from "@/lib/disponibilidad";
+import { calcularSlots, minAHhmm, hhmmAMin, fechaLocalHoy, jornadaDelDia, seSolapa, formatearHora12 } from "@/lib/disponibilidad";
 import { normalizarCelular, linkWhatsApp, mensajeConfirmacion } from "@/lib/whatsapp";
 import { ESTADO_CITA, ROLES } from "@/lib/constants";
 import { serializarCita } from "@/lib/serializers";
+import { enviarPush } from "@/lib/push";
 
 // POST /api/citas/manual  -> el barbero crea una cita para un cliente presencial
 export const POST = handler(async (req) => {
@@ -84,6 +85,20 @@ export const POST = handler(async (req) => {
   });
 
   const citaObj = cita.toObject();
+
+  // Notificación push al cliente confirmando la cita manual (si tiene recordatorios
+  // activos en este dispositivo). No bloquea ni rompe la respuesta si falla.
+  if (citaObj.clienteCelular) {
+    enviarPush(
+      { ownerRole: "cliente", clienteCelular: citaObj.clienteCelular },
+      {
+        title: "Cita confirmada ✅",
+        body: `${barbero.nombre} agendó tu cita de ${plan.nombre} el ${citaObj.fecha} a las ${formatearHora12(citaObj.horaInicio)}.`,
+        url: "/mis-citas",
+        tag: `cita-${cita._id}`,
+      }
+    ).catch(() => {});
+  }
 
   // Si el barbero registró el celular del cliente, devolvemos el enlace de
   // WhatsApp con la confirmación para que quede el contacto de ambos lados.

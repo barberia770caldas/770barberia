@@ -146,6 +146,19 @@ export const PATCH = handler(async (req, { params }) => {
         ).catch(() => {});
       }
 
+      // Si quien cancela es el cliente, avisar por push al barbero dueño.
+      if (esCliente && !esBarberoDueno) {
+        enviarPush(
+          { ownerRole: ROLES.BARBERO, ownerId: cita.barbero },
+          {
+            title: "Cita cancelada por el cliente",
+            body: `${cita.clienteNombre} canceló su cita del ${cita.fecha} a las ${formatearHora12(cita.horaInicio)}.`,
+            url: "/barbero/panel",
+            tag: `cancelada-${cita._id}`,
+          }
+        ).catch(() => {});
+      }
+
       // Si el barbero cancela una cita ya confirmada, avisar al cliente por WhatsApp.
       let link;
       if (esBarberoDueno && eraConfirmada && cita.clienteCelular) {

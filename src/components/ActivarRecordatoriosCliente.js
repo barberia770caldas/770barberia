@@ -22,6 +22,8 @@ function urlBase64ToUint8Array(base64String) {
 export default function ActivarRecordatoriosCliente({ celular }) {
   const [estado, setEstado] = useState("cargando"); // cargando|no-soportado|activo|inactivo|denegado
   const [ocupado, setOcupado] = useState(false);
+  const [probando, setProbando] = useState(false);
+  const [mensajePrueba, setMensajePrueba] = useState(null); // { ok: boolean, texto: string }
 
   const soportado =
     typeof window !== "undefined" &&
@@ -58,7 +60,10 @@ export default function ActivarRecordatoriosCliente({ celular }) {
         }
       })
       .catch(() => setEstado("inactivo"));
-  }, [soportado, celular]);
+    // `soportado` se deriva de constantes/APIs del navegador (estable entre
+    // renders); solo re-sincronizamos cuando cambia el celular.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [celular]);
 
   const activar = useCallback(async () => {
     const cel = (celular || "").replace(/\D/g, "");
@@ -115,6 +120,31 @@ export default function ActivarRecordatoriosCliente({ celular }) {
     }
   }
 
+  // Envía una notificación de prueba a este celular para que el cliente
+  // compruebe (idealmente con la pantalla bloqueada) que los recordatorios
+  // le van a llegar. ok() de @/lib/api devuelve el data plano -> data.ok.
+  async function enviarPrueba() {
+    setProbando(true);
+    setMensajePrueba(null);
+    try {
+      const res = await fetch("/api/push/cliente/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ celular }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setMensajePrueba({ ok: true, texto: data.mensaje || "Notificación enviada." });
+      } else {
+        setMensajePrueba({ ok: false, texto: data.error || "No se pudo enviar la prueba." });
+      }
+    } catch {
+      setMensajePrueba({ ok: false, texto: "No se pudo enviar la prueba. Intentá de nuevo." });
+    } finally {
+      setProbando(false);
+    }
+  }
+
   // No mostramos nada mientras carga, si el navegador no soporta push, o si aún
   // no hay un celular válido con el cual asociar la suscripción.
   if (estado === "cargando" || estado === "no-soportado") return null;
@@ -139,6 +169,11 @@ export default function ActivarRecordatoriosCliente({ celular }) {
         {estado === "activo" && (
           <p className="text-xs text-green-700 mt-0.5">Activado en este dispositivo ✓</p>
         )}
+        {estado === "activo" && mensajePrueba && (
+          <p className={`text-xs mt-1 ${mensajePrueba.ok ? "text-green-700" : "text-red-600"}`}>
+            {mensajePrueba.texto}
+          </p>
+        )}
       </div>
       {estado === "inactivo" && (
         <button onClick={activar} disabled={ocupado} className="btn-primary text-sm py-1.5 px-4 shrink-0">
@@ -146,9 +181,14 @@ export default function ActivarRecordatoriosCliente({ celular }) {
         </button>
       )}
       {estado === "activo" && (
-        <button onClick={desactivar} disabled={ocupado} className="btn-outline text-sm py-1.5 px-4 shrink-0">
-          {ocupado ? "…" : "Desactivar"}
-        </button>
+        <div className="flex gap-2 shrink-0">
+          <button onClick={enviarPrueba} disabled={probando} className="btn-outline text-sm py-1.5 px-4">
+            {probando ? "Enviando…" : "🔔 Probar"}
+          </button>
+          <button onClick={desactivar} disabled={ocupado} className="btn-outline text-sm py-1.5 px-4">
+            {ocupado ? "…" : "Desactivar"}
+          </button>
+        </div>
       )}
     </div>
   );
