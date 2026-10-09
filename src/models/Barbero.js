@@ -91,6 +91,8 @@ const BarberoSchema = new mongoose.Schema(
     suscripcionVence: Date,
     fechaInicioSuscripcion: Date,
     tarifaMensual: { type: Number, default: 20000 }, // COP
+    pagoMesActual: { type: String, default: "" }, // 'YYYY-MM' del último mes pagado
+    avisoPagoEnviado: { type: String, default: "" }, // 'YYYY-MM' en que se envió el aviso de cobro
   },
   { timestamps: true }
 );

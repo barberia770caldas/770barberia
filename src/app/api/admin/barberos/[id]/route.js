@@ -100,6 +100,13 @@ export const PATCH = handler(async (req, { params }) => {
       if (fechaVencimiento) b.suscripcionVence = new Date(fechaVencimiento);
       break;
     }
+    case "marcar-pago": {
+      // Mes actual en zona Colombia (UTC-5, sin DST)
+      const ahora = new Date(Date.now() - 5 * 60 * 60 * 1000);
+      const mes = `${ahora.getUTCFullYear()}-${String(ahora.getUTCMonth() + 1).padStart(2, "0")}`;
+      b.pagoMesActual = mes;
+      break;
+    }
     default:
       return fail("Acción no válida", 400);
   }

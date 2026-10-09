@@ -2,7 +2,7 @@ import Cita from "@/models/Cita";
 import Barbero from "@/models/Barbero";
 import { enviarPush } from "@/lib/push";
 import { normalizarCelular } from "@/lib/whatsapp";
-import { ESTADO_CITA, ROLES } from "@/lib/constants";
+import { ESTADO_CITA, ESTADO_BARBERO, ROLES } from "@/lib/constants";
 import {
   fechaLocalHoy,
   hhmmAMin,
@@ -116,5 +116,43 @@ export async function recordarClientesDelDia({ barberoId = null, celular = null 
   } catch (e) {
     console.error("recordarClientesDelDia falló:", e.message);
     return { revisadas: 0, recordadas: 0 };
+  }
+}
+
+// Avisa a los BARBEROS activos que aún no han pagado el mes, durante los
+// primeros 5 días del mes. Solo envía una vez por mes (flag avisoPagoEnviado).
+export async function recordarPagoMensual() {
+  try {
+    const hoy = fechaLocalHoy(); // 'YYYY-MM-DD' en zona Colombia
+    const dia = parseInt(hoy.split("-")[2], 10);
+    if (dia > 5) return { revisados: 0, notificados: 0 };
+
+    const mesActual = hoy.slice(0, 7); // 'YYYY-MM'
+
+    const barberos = await Barbero.find({
+      estado: ESTADO_BARBERO.ACTIVO,
+      pagoMesActual: { $ne: mesActual },
+      avisoPagoEnviado: { $ne: mesActual },
+    }).lean();
+
+    let notificados = 0;
+    for (const b of barberos) {
+      await enviarPush(
+        { ownerRole: ROLES.BARBERO, ownerId: b._id },
+        {
+          title: "Pago mensual pendiente 💈",
+          body: "Recuerda realizar el pago mensual de la plataforma para mantener tu cuenta activa.",
+          url: "/barbero/panel",
+          tag: `pago-mensual-${mesActual}`,
+        }
+      );
+      await Barbero.updateOne({ _id: b._id }, { $set: { avisoPagoEnviado: mesActual } });
+      notificados++;
+    }
+
+    return { revisados: barberos.length, notificados };
+  } catch (e) {
+    console.error("recordarPagoMensual falló:", e.message);
+    return { revisados: 0, notificados: 0 };
   }
 }

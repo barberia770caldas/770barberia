@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { dbConnect } from "@/lib/db";
 import { ok, fail, handler } from "@/lib/api";
-import { recordarCitasSinConfirmar, recordarClientesDelDia } from "@/lib/recordatorios";
+import { recordarCitasSinConfirmar, recordarClientesDelDia, recordarPagoMensual } from "@/lib/recordatorios";
 
 // No cachear: cada llamada debe consultar la BD en el momento.
 export const dynamic = "force-dynamic";
@@ -30,10 +30,13 @@ export const GET = handler(async (req) => {
 
   const avisoBarbero = await recordarCitasSinConfirmar();
   const avisoCliente = await recordarClientesDelDia();
+  const avisoPago = await recordarPagoMensual();
 
   return ok({
     revisadas: avisoBarbero.revisadas,
     notificadas: avisoBarbero.notificadas,
     recordadasCliente: avisoCliente.recordadas,
+    pagoRevisados: avisoPago.revisados,
+    pagoNotificados: avisoPago.notificados,
   });
 });

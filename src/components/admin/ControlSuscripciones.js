@@ -52,11 +52,18 @@ function calcularEstadoSuscripcion(suscripcionVence) {
   };
 }
 
+function mesActualStr() {
+  // Mes actual en zona Colombia (UTC-5, sin DST)
+  const ahora = new Date(Date.now() - 5 * 60 * 60 * 1000);
+  return `${ahora.getUTCFullYear()}-${String(ahora.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
 export default function ControlSuscripciones({ barberos = [], onActualizar }) {
   const { confirmar } = useDialog();
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("todos"); // 'todos' | 'por_cobrar' | 'al_dia' | 'vencidos'
   const [procesandoId, setProcesandoId] = useState(null);
+  const mesActual = mesActualStr();
   const [editandoBarbero, setEditandoBarbero] = useState(null); // { id, tarifaMensual, suscripcionVence }
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
 
@@ -181,6 +188,32 @@ export default function ControlSuscripciones({ barberos = [], onActualizar }) {
       alert(err.message);
     } finally {
       setGuardandoEdicion(false);
+    }
+  }
+
+  // Acción: Marcar pago del mes actual
+  async function marcarPago(b) {
+    const ok = await confirmar({
+      titulo: "Confirmar pago",
+      mensaje: `¿Marcar a ${b.nombre} (${b.local}) como pagado este mes?`,
+      confirmarLabel: "Sí, marcar como pagado",
+    });
+    if (!ok) return;
+
+    setProcesandoId(b.id);
+    try {
+      const res = await fetch(`/api/admin/barberos/${b.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accion: "marcar-pago" }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Error al marcar pago");
+      onActualizar?.();
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setProcesandoId(null);
     }
   }
 
@@ -352,6 +385,15 @@ export default function ControlSuscripciones({ barberos = [], onActualizar }) {
                       <span>
                         💵 <strong>Tarifa:</strong> {formatoCOP(b.tarifaMensual ?? 20000)}/mes
                       </span>
+                      {b.pagoMesActual === mesActual ? (
+                        <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold">
+                          ✅ Pagado este mes
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-amber-700 font-semibold">
+                          ⚠️ Pago pendiente
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -401,6 +443,22 @@ export default function ControlSuscripciones({ barberos = [], onActualizar }) {
                     >
                       ✏️ Ajustar
                     </button>
+
+                    {/* Botón Marcar pago */}
+                    {b.pagoMesActual !== mesActual ? (
+                      <button
+                        type="button"
+                        disabled={procesandoId === b.id}
+                        onClick={() => marcarPago(b)}
+                        className="text-xs py-1.5 px-2.5 rounded-lg border border-emerald-400 text-emerald-800 hover:bg-emerald-50 font-semibold"
+                      >
+                        ✓ Marcar pago
+                      </button>
+                    ) : (
+                      <span className="text-xs py-1.5 px-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold">
+                        ✅ Pagado
+                      </span>
+                    )}
 
                     {/* Botón Pausar/Activar */}
                     <button
